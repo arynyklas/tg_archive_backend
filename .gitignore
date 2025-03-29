@@ -1,0 +1,15 @@
+**__**
+**test**
+*.yml
+*.crt
+*.key
+*.pem
+.venv*/
+logs*/
+*.lock
+
+scripts/
+
+!__init__.py
+!__main__.py
+!config.sample.yml
