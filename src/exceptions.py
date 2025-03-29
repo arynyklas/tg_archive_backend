@@ -1,6 +1,5 @@
 from fastapi import status
 from pydantic.dataclasses import dataclass as _dataclass
-from dataclasses import field as _field
 from typing_extensions import Self
 
 import typing
@@ -49,19 +48,11 @@ def get_obj(exception: typing.Union[BaseError, typing.Type[BaseError]]) -> BaseE
 
 
 def combine(*exceptions: BaseError | typing.Type[BaseError]) -> dict[int | str, dict[str, typing.Any]]:
-    result: dict[int | str, dict[str, typing.Any]] = {}
-
-    for exception in exceptions:
-        result.update(get_obj(exception).as_openapi)
-
-    return result
-
-
-def field(**kwargs: typing.Any):
-    return _field(
-        kw_only = True,
-        **kwargs
-    )
+    return {
+        status_code: content
+        for exception in exceptions
+        for status_code, content in get_obj(exception).as_openapi.items()
+    }
 
 
 @_dataclass
