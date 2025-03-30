@@ -8,9 +8,11 @@
 logs*/
 *.lock
 *.session*
+layers/
 
 scripts/
 
 !__init__.py
 !__main__.py
 !config.sample.yml
+!layers_generator/data/layers/
