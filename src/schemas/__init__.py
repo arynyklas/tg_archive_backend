@@ -1,30 +1,28 @@
 from pydantic import Field, field_validator
 from datetime import datetime
+from functools import partial
 
 import typing
 
 # from . import admin  # type: ignore
-from .base import BaseModel, BaseRequest, BaseResponse
+from .base import BaseModel, BaseRequest, BaseResponse, Timestamp
 
 
 DICT_DATA_T = dict[str, typing.Any]
-
 OKResponse = BaseResponse
+Field_timestamp = partial(Field, examples=[1735671601])
 
 
-class Timestamp(int):
-    @classmethod
-    def __get_validators__(cls):  # type: ignore
-        yield cls.validate  # type: ignore
-
-    @classmethod
-    def validate(cls, value: typing.Any, _: typing.Any=None) -> int:
-        if isinstance(value, datetime):
-            return int(value.timestamp())
-        if isinstance(value, (int, float)):
-            return int(value)
-
-        raise TypeError("timestamp must be a datetime or an int/float representing a timestamp")
+class SupportedLayersResponse(BaseResponse):
+    supported_layers: list[int] = Field(
+        default_factory = list,
+        description = "List of supported layers",
+        examples = [
+            [
+                201,
+            ]
+        ]
+    )
 
 
 class UploadTgPacketRequest(BaseRequest):
@@ -92,7 +90,7 @@ class Message(BaseModel):
         description = "Markdown text of the message"
     )
 
-    sent_at: Timestamp | datetime = Field(
+    sent_at: int | Timestamp | datetime = Field_timestamp(
         ...,
         description = "Datetime when the message was sent (UTC)"
     )
@@ -112,7 +110,7 @@ class Message(BaseModel):
         description = "Packet data (hex)"
     )
 
-    inserted_at: Timestamp | datetime = Field(
+    inserted_at: int | Timestamp | datetime = Field_timestamp(
         ...,
         description = "Datetime when the message was inserted into the database (UTC)"
     )

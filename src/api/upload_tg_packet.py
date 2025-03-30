@@ -14,7 +14,7 @@ api_upload_tg_packet_router = APIRouter()
 
 @api_upload_tg_packet_router.post(
     path = "/upload_tg_packet",
-    summary = "Update daily streak",
+    summary = "Upload Telegram raw packet",
     responses = exceptions.combine(
         # exceptions.ConcurrentRequestsError,
         exceptions.InvalidParametersError,
