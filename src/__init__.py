@@ -8,7 +8,23 @@ import typing
 from src import db, utils, exceptions, constants
 from src.global_variables import GlobalVariables
 from src.config import config
-from .api import api_router
+
+
+for layer_dirpath in constants.LAYERS_DIRPATH.iterdir():
+    if not layer_dirpath.name.isdigit():
+        continue
+
+    layer = int(layer_dirpath.name)
+
+    GlobalVariables.layers_tlobjects[layer] = __import__(f"layers.{layer_dirpath.name}.tl.alltlobjects", fromlist=['tlobjects']).tlobjects
+    GlobalVariables.layers_coreobjects[layer] = __import__(f"layers.{layer_dirpath.name}.tl.core", fromlist=['core_objects']).core_objects
+
+
+if not GlobalVariables.layers_tlobjects:
+    raise RuntimeError(f"No layers found. Please check the {constants.LAYERS_DIRPATH.resolve().as_posix()} directory.")
+
+
+from .api import api_router  # noqa
 
 
 logger = utils.get_logger(

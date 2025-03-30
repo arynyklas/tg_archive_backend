@@ -10,22 +10,29 @@ from .base import BaseModel, BaseRequest, BaseResponse, Timestamp
 
 DICT_DATA_T = dict[str, typing.Any]
 OKResponse = BaseResponse
-Field_timestamp = partial(Field, examples=[1735671601])
+Field_timestamp = partial(Field, examples=[1735689601])
+
+
+LAYER_EXAMPLES = [
+    201,
+]
 
 
 class SupportedLayersResponse(BaseResponse):
     supported_layers: list[int] = Field(
         default_factory = list,
         description = "List of supported layers",
-        examples = [
-            [
-                201,
-            ]
-        ]
+        examples = [LAYER_EXAMPLES]
     )
 
 
 class UploadTgPacketRequest(BaseRequest):
+    layer: int = Field(
+        ...,
+        description = "Telegram MTProto layer",
+        examples = LAYER_EXAMPLES
+    )
+
     auth_key: str = Field(
         ...,
         description = "Auth key used to get the packet (hex)"

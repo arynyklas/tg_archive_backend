@@ -1,15 +1,57 @@
 from fastapi import APIRouter, Body
-from pyrogram import raw, types
-from pyrogram.parser.markdown import Markdown
+# from pyrogram import types
+from telethon.tl.tlobject import TLObject
+# from pyrogram.parser.markdown import Markdown
+from functools import partial
 
 import sqlalchemy as sa
 import typing
 
-from src import db, schemas, exceptions, utils
+from src import db, schemas, exceptions
 from src.api import _dependencies
+from src.global_variables import GlobalVariables
+from src.tg_packet_parser import parse_tg_packet
 
 
 api_upload_tg_packet_router = APIRouter()
+
+
+NEEDED_LAYERS_TLOBJECT_NAMES = [
+    "Updates",
+    "UpdateNewChannelMessage",
+    "Message",
+    "PeerChannel",
+    "PeerUser",
+]
+
+
+def _find_tlobject_by_name(tlobjects: dict[int, TLObject], name: str) -> TLObject:
+    for tlobject in tlobjects.values():
+        if tlobject.__name__ == name:  # type: ignore
+            return tlobject
+
+    raise ValueError(f"TLObject with name {name} not found in layer {tlobjects}")
+
+
+NEEDED_LAYERS_TLOBJECTS: dict[int, dict[str, TLObject]] = {
+    layer: {
+        tlobject_name: _find_tlobject_by_name(tlobjects, tlobject_name)
+        for tlobject_name in NEEDED_LAYERS_TLOBJECT_NAMES
+    }
+    for layer, tlobjects in GlobalVariables.layers_tlobjects.items()
+}
+
+NEEDED_LAYERS_TLOBJECTS_CONSTRUCTOR_IDS: dict[int, dict[str, int]] = {
+    layer: {
+        tlobject_name: typing.cast(int, tlobject.CONSTRUCTOR_ID)
+        for tlobject_name, tlobject in tlobjects.items()
+    }
+    for layer, tlobjects in NEEDED_LAYERS_TLOBJECTS.items()
+}
+
+
+def _is_tlobject_same_by_constructor_id(tlobject: TLObject, name: str, needed_layers_tlobject_constructor_ids: dict[str, int]) -> bool:
+    return typing.cast(int, tlobject.CONSTRUCTOR_ID) == needed_layers_tlobject_constructor_ids[name]
 
 
 @api_upload_tg_packet_router.post(
@@ -25,29 +67,45 @@ async def api_upload_tg_packet_handler(
     db_session: db.DBSession = _dependencies.get_db_session,
     request_obj: schemas.UploadTgPacketRequest = Body()
 ) -> schemas.OKResponse:
+    layer = request_obj.layer
+
+    if layer not in GlobalVariables.layers_tlobjects:
+        raise exceptions.InvalidLayerError()
+
     try:
         auth_key, session_id, packet = request_obj.get_bytes()
 
     except ValueError as ex:
         raise exceptions.InvalidParametersError() from ex
 
-    tl_message = utils.parse_tg_packet(packet, auth_key, session_id)
+    needed_layers_tlobject_constructor_ids = NEEDED_LAYERS_TLOBJECTS_CONSTRUCTOR_IDS[layer]
+
+    tl_message = parse_tg_packet(
+        packet = packet,
+        auth_key = auth_key,
+        session_id = session_id,
+        tlobjects = GlobalVariables.layers_tlobjects[layer],
+        core_objects = GlobalVariables.layers_coreobjects[layer]
+    )
 
     if tl_message is None:
         raise exceptions.InvalidParametersError()
 
-    if isinstance(tl_message.body, raw.types.rpc_result.RpcResult) and isinstance(tl_message.body.result, raw.types.updates_t.Updates):
-        updates = tl_message.body.result.updates
+    is_tlobject_same_by_constructor_id = partial(
+        _is_tlobject_same_by_constructor_id,
+        needed_layers_tlobject_constructor_ids = needed_layers_tlobject_constructor_ids
+    )
 
-        for update in updates:
-            if isinstance(update, raw.types.update_new_channel_message.UpdateNewChannelMessage):
-                message = update.message
+    if is_tlobject_same_by_constructor_id(tl_message.obj, "Updates"):  # type: ignore
+        for update in tl_message.obj.updates:  # type: ignore
+            if is_tlobject_same_by_constructor_id(update, "UpdateNewChannelMessage"):  # type: ignore
+                message = update.message  # type: ignore
 
-                if isinstance(message, raw.types.message.Message):
-                    if isinstance(message.peer_id, raw.types.peer_channel.PeerChannel) and isinstance(message.from_id, raw.types.peer_user.PeerUser):
-                        tg_user_id = message.from_id.user_id
-                        tg_chat_id = -1 * (message.peer_id.channel_id + 1_000_000_000_000)
-                        tg_message_id = message.id
+                if is_tlobject_same_by_constructor_id(message, "Message"):  # type: ignore
+                    if is_tlobject_same_by_constructor_id(message.peer_id, "PeerChannel") and is_tlobject_same_by_constructor_id(message.from_id, "PeerUser"):  # type: ignore
+                        tg_user_id = typing.cast(int, message.from_id.user_id)  # type: ignore
+                        tg_chat_id = typing.cast(int, -1 * (message.peer_id.channel_id + 1_000_000_000_000))  # type: ignore
+                        tg_message_id = typing.cast(int, message.id)  # type: ignore
                         db_chat: db.Chat | None = None
                         db_user: db.User | None = None
                         chat_or_user_added = False
@@ -87,22 +145,23 @@ async def api_upload_tg_packet_handler(
                             if chat_or_user_added:
                                 await db_session.flush()
 
-                            entities = types.List(filter(lambda x: x is not None, [types.MessageEntity._parse(None, entity) for entity in (message.entities or [])]))  # type: ignore
-                            md_text = typing.cast(str, Markdown.unparse(message.message, entities))  # type: ignore
+                            # TODO: markdown text
+                            # entities = filter(lambda x: x is not None, [types.MessageEntity._parse(None, entity) for entity in (message.entities or [])])  # type: ignore
+                            # md_text = typing.cast(str, Markdown.unparse(message.message, entities))  # type: ignore
+                            md_text = typing.cast(str, message.message)  # type: ignore
 
                             db_session.add(db.Message(
                                 tg_chat_id = tg_chat_id,
                                 tg_user_id = tg_user_id,
                                 tg_message_id = tg_message_id,
                                 md_text = md_text,
-                                sent_at = utils.get_datetime_utc_from_timestamp(message.date),
+                                sent_at = message.date,  # type: ignore
                                 used_auth_key = auth_key,
                                 used_session_id = session_id,
                                 packet = packet,
                                 chat = db_chat,
                                 user = db_user
                             ))
-
 
     await db_session.commit()
 

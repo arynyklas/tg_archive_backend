@@ -8,6 +8,7 @@ APP_VERSION = "0.1.0"
 
 PARENT_DIRPATH = Path(__file__).parent.parent
 LOGS_DIRPATH = PARENT_DIRPATH / "logs"
+LAYERS_DIRPATH = PARENT_DIRPATH / "layers"
 
 LOG_FILENAME = "log.txt"
 

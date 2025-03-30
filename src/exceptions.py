@@ -62,6 +62,12 @@ class InvalidParametersError(BaseError):
 
 
 @_dataclass
+class InvalidLayerError(BaseError):
+    status_code: int = status.HTTP_400_BAD_REQUEST
+    description: str = "Invalid layer"
+
+
+@_dataclass
 class ConcurrentRequestsError(BaseError):
     status_code: int = status.HTTP_429_TOO_MANY_REQUESTS
     description: str = "Too many concurrent requests"

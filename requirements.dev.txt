@@ -1,7 +1,5 @@
 -r requirements.txt
 
-# pyrofork==2.3.60
-# tgcrypto-pyrofork==1.2.7
 pyrogram==2.0.106
 uvicorn==0.34.0
 

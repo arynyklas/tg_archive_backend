@@ -2,10 +2,6 @@ from time import time
 from datetime import datetime, timezone
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
-from pyrogram.crypto import mtproto
-from pyrogram.raw.core.message import Message as TLMessage
-from io import BytesIO
-from hashlib import sha1
 
 import logging
 import typing
@@ -54,18 +50,3 @@ def get_logger(name: str, filepath: Path) -> logging.Logger:
     logger.setLevel(logging.DEBUG)
 
     return logger
-
-
-def parse_tg_packet(packet: bytes, auth_key: bytes, session_id: bytes) -> TLMessage | None:
-    auth_key_id = sha1(auth_key).digest()[-8:]
-
-    try:
-        return mtproto.unpack(
-            BytesIO(packet),
-            session_id,
-            auth_key,
-            auth_key_id
-        )
-
-    except Exception:
-        return None

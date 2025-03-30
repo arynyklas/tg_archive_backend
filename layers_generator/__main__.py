@@ -1,6 +1,7 @@
 import itertools
 import os
 import sys
+import shutil
 import typing
 
 from pathlib import Path
@@ -35,6 +36,7 @@ GENERATED_LAYERS_DIR = Path(__file__).parent.parent / 'layers'
 
 BASE_TLOBJECT_IN_TLS = [GENERATOR_DIR / "data" / "mtproto.tl"]
 GENERATOR_LAYERS_DIRPATH = GENERATOR_DIR / "data" / "layers"
+GENERATOR_TO_COPY_DIRPATH = GENERATOR_DIR / "to_copy"
 
 IMPORT_DEPTH = 2
 
@@ -72,11 +74,18 @@ def main() -> None:
 
         generate_tlobjects(tlobjects, layer, IMPORT_DEPTH, layer_tlobject_dir)
 
+        shutil.copytree(
+            GENERATOR_TO_COPY_DIRPATH,
+            generated_layer_dir,
+            dirs_exist_ok = True
+        )
 
         # print("Generating RPCErrors...")
 
         # with ERRORS_OUT.open('w') as file:
         #     generate_errors(errors, file)
+
+    (GENERATED_LAYERS_DIR / "__init__.py").touch()
 
 
 main()
