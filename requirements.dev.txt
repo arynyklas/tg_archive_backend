@@ -1,6 +1,3 @@
 -r requirements.txt
 
-pyrogram==2.0.106
 uvicorn==0.34.0
-
-telethon==1.39.0
