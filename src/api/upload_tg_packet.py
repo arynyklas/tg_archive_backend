@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Body
+from fastapi.exceptions import RequestValidationError
 from telethon.tl.tlobject import TLObject
 from functools import partial
 
@@ -57,11 +58,9 @@ def _is_tlobject_same_by_constructor_id(tlobject: TLObject, name: str, needed_la
     path = "/upload_tg_packet",
     summary = "Upload Telegram raw packet",
     responses = exceptions.combine(
-        # exceptions.ConcurrentRequestsError,
-        exceptions.InvalidParametersError,
+        # exceptions.InvalidLayerError,
     )
 )
-# @_dependencies.block_concurrent_requests()
 async def api_upload_tg_packet_handler(
     db_session: db.DBSession = _dependencies.get_db_session,
     request_obj: schemas.UploadTgPacketRequest = Body()
@@ -69,13 +68,29 @@ async def api_upload_tg_packet_handler(
     layer = request_obj.layer
 
     if layer not in GlobalVariables.layers_tlobjects:
-        raise exceptions.InvalidLayerError()
+        raise RequestValidationError(
+            errors = [
+                {
+                    "loc": ["body", "layer"],
+                    "msg": f"Layer {layer} is not supported",
+                    "type": "value_error"
+                }
+            ]
+        )
 
     try:
         auth_key, session_id, packet = request_obj.get_bytes()
 
-    except ValueError as ex:
-        raise exceptions.InvalidParametersError() from ex
+    except ValueError:
+        raise RequestValidationError(
+            errors = [
+                {
+                    "loc": ["body", "auth_key", "session_id", "packet"],
+                    "msg": "Not hex-encoded bytes",
+                    "type": "value_error"
+                }
+            ]
+        )
 
     needed_layers_tlobject_constructor_ids = NEEDED_LAYERS_TLOBJECTS_CONSTRUCTOR_IDS[layer]
 
@@ -88,7 +103,15 @@ async def api_upload_tg_packet_handler(
     )
 
     if tl_message is None:
-        raise exceptions.InvalidParametersError()
+        raise RequestValidationError(
+            errors = [
+                {
+                    "loc": ["body", "packet"],
+                    "msg": "Invalid packet content",
+                    "type": "value_error"
+                }
+            ]
+        )
 
     is_tlobject_same_by_constructor_id = partial(
         _is_tlobject_same_by_constructor_id,

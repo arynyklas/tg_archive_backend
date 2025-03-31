@@ -56,18 +56,6 @@ def combine(*exceptions: BaseError | typing.Type[BaseError]) -> dict[int | str, 
 
 
 @_dataclass
-class InvalidParametersError(BaseError):
-    status_code: int = status.HTTP_400_BAD_REQUEST
-    description: str = "Invalid parameters"
-
-
-@_dataclass
-class InvalidLayerError(BaseError):
-    status_code: int = status.HTTP_400_BAD_REQUEST
-    description: str = "Invalid layer"
-
-
-@_dataclass
 class ConcurrentRequestsError(BaseError):
     status_code: int = status.HTTP_429_TOO_MANY_REQUESTS
     description: str = "Too many concurrent requests"
