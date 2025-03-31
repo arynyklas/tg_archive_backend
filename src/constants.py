@@ -5,6 +5,56 @@ ENCODING = "utf-8"
 
 APP_VERSION = "0.1.0"
 
+NEEDED_LAYERS_TLOBJECT_NAMES = [
+    "Updates",
+    "UpdateNewChannelMessage",
+    "Message",
+    "PeerChannel",
+    "PeerUser",
+
+    "User",
+    "Chat",
+    "Channel",
+    "MessageEmpty",
+    "MessageEntityBankCard",
+    "MessageEntityBlockquote",
+    "MessageEntityBold",
+    "MessageEntityBotCommand",
+    "MessageEntityCashtag",
+    "MessageEntityCode",
+    "MessageEntityCustomEmoji",
+    "MessageEntityEmail",
+    "MessageEntityHashtag",
+    "MessageEntityItalic",
+    "MessageEntityMention",
+    "MessageEntityMentionName",
+    "MessageEntityPhone",
+    "MessageEntityPre",
+    "MessageEntitySpoiler",
+    "MessageEntityStrike",
+    "MessageEntityTextUrl",
+    "MessageEntityUnderline",
+    "MessageEntityUnknown",
+    "MessageEntityUrl",
+    "MessageReplies",
+    "MessageService",
+    "UserProfilePhotoEmpty",
+    "UserProfilePhoto",
+    "UserStatusEmpty",
+    "UserStatusOnline",
+    "UserStatusOffline",
+    "UserStatusRecently",
+    "UserStatusLastWeek",
+    "UserStatusLastMonth",
+    "EmojiStatusEmpty",
+    "EmojiStatus",
+    "EmojiStatusCollectible",
+    "PeerColor",
+    "ChatPhotoEmpty",
+    "ChatPhoto",
+    "ChatBannedRights",
+]
+
 
 PARENT_DIRPATH = Path(__file__).parent.parent
 LOGS_DIRPATH = PARENT_DIRPATH / "logs"

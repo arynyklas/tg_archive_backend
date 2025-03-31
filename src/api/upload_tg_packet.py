@@ -16,40 +16,6 @@ from src.markdown_utils import unparse_markdown
 api_upload_tg_packet_router = APIRouter()
 
 
-NEEDED_LAYERS_TLOBJECT_NAMES = [
-    "Updates",
-    "UpdateNewChannelMessage",
-    "Message",
-    "PeerChannel",
-    "PeerUser",
-]
-
-
-def _find_tlobject_by_name(tlobjects: dict[int, TLObject], name: str) -> TLObject:
-    for tlobject in tlobjects.values():
-        if tlobject.__name__ == name:  # type: ignore
-            return tlobject
-
-    raise ValueError(f"TLObject with name {name} not found in layer {tlobjects}")
-
-
-NEEDED_LAYERS_TLOBJECTS: dict[int, dict[str, TLObject]] = {
-    layer: {
-        tlobject_name: _find_tlobject_by_name(tlobjects, tlobject_name)
-        for tlobject_name in NEEDED_LAYERS_TLOBJECT_NAMES
-    }
-    for layer, tlobjects in GlobalVariables.layers_tlobjects.items()
-}
-
-NEEDED_LAYERS_TLOBJECTS_CONSTRUCTOR_IDS: dict[int, dict[str, int]] = {
-    layer: {
-        tlobject_name: typing.cast(int, tlobject.CONSTRUCTOR_ID)
-        for tlobject_name, tlobject in tlobjects.items()
-    }
-    for layer, tlobjects in NEEDED_LAYERS_TLOBJECTS.items()
-}
-
-
 def _is_tlobject_same_by_constructor_id(tlobject: TLObject, name: str, needed_layers_tlobject_constructor_ids: dict[str, int]) -> bool:
     return typing.cast(int, tlobject.CONSTRUCTOR_ID) == needed_layers_tlobject_constructor_ids[name]
 
@@ -92,8 +58,6 @@ async def api_upload_tg_packet_handler(
             ]
         )
 
-    needed_layers_tlobject_constructor_ids = NEEDED_LAYERS_TLOBJECTS_CONSTRUCTOR_IDS[layer]
-
     tl_message = parse_tg_packet(
         packet = packet,
         auth_key = auth_key,
@@ -115,7 +79,7 @@ async def api_upload_tg_packet_handler(
 
     is_tlobject_same_by_constructor_id = partial(
         _is_tlobject_same_by_constructor_id,
-        needed_layers_tlobject_constructor_ids = needed_layers_tlobject_constructor_ids
+        needed_layers_tlobject_constructor_ids = GlobalVariables.needed_layers_tlobjects_constructor_ids[layer]
     )
 
     if is_tlobject_same_by_constructor_id(tl_message.obj, "Updates"):  # type: ignore

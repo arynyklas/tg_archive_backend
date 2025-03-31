@@ -4,6 +4,7 @@ from telethon.tl import TLObject
 from telethon.tl.core import TLMessage
 from telethon.errors import TypeNotFoundError
 from hashlib import sha256, sha1
+from functools import partial
 
 import struct
 import typing
@@ -20,23 +21,20 @@ def _calc_key(auth_key: bytes, msg_key: bytes) -> tuple[bytes, bytes]:
     return (aes_key, aes_iv)
 
 
-POSSIBLE_READ_RESSULT_t = typing.Union[TLObject, bool, list["POSSIBLE_READ_RESSULT_t"]]
+POSSIBLE_READ_RESSULT_T = TLObject | bool | list["POSSIBLE_READ_RESSULT_T"] | None
 
-def tgread_object(reader: BinaryReader, tlobjects: dict[int, TLObject], core_objects: dict[int, TLObject]) -> POSSIBLE_READ_RESSULT_t:
+def tgread_object(reader: BinaryReader, tlobjects: dict[int, TLObject], core_objects: dict[int, TLObject]) -> POSSIBLE_READ_RESSULT_T:
     constructor_id = reader.read_int(signed=False)
     clazz = tlobjects.get(constructor_id, None)
 
     if clazz is None:
-        value = constructor_id
-        print("\tConstructor ID: ", hex(value))
-
-        if value == 0x997275b5:  # boolTrue
+        if constructor_id == 0x997275b5:  # boolTrue
             return True
 
-        elif value == 0xbc799737:  # boolFalse
+        elif constructor_id == 0xbc799737:  # boolFalse
             return False
 
-        elif value == 0x1cb5c415:  # Vector
+        elif constructor_id == 0x1cb5c415:  # Vector
             return [
                 tgread_object(reader, tlobjects, core_objects)
                 for _ in range(reader.read_int())
@@ -50,6 +48,13 @@ def tgread_object(reader: BinaryReader, tlobjects: dict[int, TLObject], core_obj
             error = TypeNotFoundError(constructor_id, reader.read())
             reader.set_position(pos)  # type: ignore
             raise error
+            # return None
+
+        else:
+            print("Class found from child", hex(constructor_id))
+
+    else:
+        print("Class found from main", hex(constructor_id))
 
     return clazz.from_reader(reader)  # type: ignore
 
@@ -85,7 +90,17 @@ def decrypt_message_data(body: bytes, auth_key: bytes, auth_key_id: bytes, sessi
     remote_sequence = reader.read_int()
     reader.read_int()  # msg_len for the inner object, padding ignored
 
-    obj = tgread_object(reader, tlobjects, core_objects)  # type: ignore
+    reader.tgread_object = partial(  # type: ignore
+        tgread_object,
+        reader = reader,
+        tlobjects = tlobjects,
+        core_objects = core_objects
+    )
+
+    try:
+        obj = reader.tgread_object()  # type: ignore
+    except BufferError as ex:
+        raise RuntimeError("Needed object not found") from ex
 
     return TLMessage(remote_msg_id, remote_sequence, obj)  # type: ignore
 
@@ -93,15 +108,15 @@ def decrypt_message_data(body: bytes, auth_key: bytes, auth_key_id: bytes, sessi
 def parse_tg_packet(packet: bytes, auth_key: bytes, session_id: bytes, tlobjects: dict[int, TLObject], core_objects: dict[int, TLObject]) -> TLMessage | None:
     auth_key_id = sha1(auth_key).digest()[-8:]
 
-    try:
-        return decrypt_message_data(
-            body = packet,
-            auth_key = auth_key,
-            auth_key_id = auth_key_id,
-            session_id = session_id,
-            tlobjects = tlobjects,
-            core_objects = core_objects
-        )
+    # try:
+    return decrypt_message_data(
+        body = packet,
+        auth_key = auth_key,
+        auth_key_id = auth_key_id,
+        session_id = session_id,
+        tlobjects = tlobjects,
+        core_objects = core_objects
+    )
 
-    except Exception:
-        return None
+    # except Exception:
+    #     return None

@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import create_async_engine as create_db_engine
+from telethon.tl.tlobject import TLObject
 
 import typing
 
@@ -9,6 +10,13 @@ from src import db, utils, exceptions, constants
 from src.global_variables import GlobalVariables
 from src.config import config
 
+
+def _find_tlobject_by_name(tlobjects: dict[int, TLObject], name: str) -> TLObject:
+    for tlobject in tlobjects.values():
+        if tlobject.__name__ == name:  # type: ignore
+            return tlobject
+
+    raise ValueError(f"TLObject with name {name} not found in layer {tlobjects}")
 
 for layer_dirpath in constants.LAYERS_DIRPATH.iterdir():
     if not layer_dirpath.name.isdigit():
@@ -18,6 +26,22 @@ for layer_dirpath in constants.LAYERS_DIRPATH.iterdir():
 
     GlobalVariables.layers_tlobjects[layer] = __import__(f"layers.{layer_dirpath.name}.tl.alltlobjects", fromlist=['tlobjects']).tlobjects
     GlobalVariables.layers_coreobjects[layer] = __import__(f"layers.{layer_dirpath.name}.tl.core", fromlist=['core_objects']).core_objects
+
+NEEDED_LAYERS_TLOBJECTS: dict[int, dict[str, TLObject]] = {
+    layer: {
+        tlobject_name: _find_tlobject_by_name(tlobjects, tlobject_name)
+        for tlobject_name in constants.NEEDED_LAYERS_TLOBJECT_NAMES
+    }
+    for layer, tlobjects in GlobalVariables.layers_tlobjects.items()
+}
+
+GlobalVariables.needed_layers_tlobjects_constructor_ids = {
+    layer: {
+        tlobject_name: typing.cast(int, tlobject.CONSTRUCTOR_ID)
+        for tlobject_name, tlobject in tlobjects.items()
+    }
+    for layer, tlobjects in NEEDED_LAYERS_TLOBJECTS.items()
+}
 
 
 if not GlobalVariables.layers_tlobjects:
