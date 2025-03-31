@@ -1,6 +1,8 @@
-from pydantic import Field, field_validator
+from fastapi import Query
+from pydantic import Field, field_validator, model_validator
 from datetime import datetime
 from functools import partial
+from typing_extensions import Self
 
 import typing
 
@@ -59,17 +61,6 @@ class UploadTgPacketRequest(BaseRequest):
         except Exception:
             raise ValueError("Invalid hex string")
 
-
-class GetMessagesRequest(BaseRequest):
-    chat_id: int | None = Field(
-        default = None,
-        description = "Telegram chat ID"
-    )
-
-    user_id: int | None = Field(
-        default = None,
-        description = "Telegram user ID"
-    )
 
 class Message(BaseModel):
     id: int = Field(
@@ -130,6 +121,11 @@ class Message(BaseModel):
 
 class ListMessages(BaseResponse):
     messages: list[Message] = Field(
-        default_factory = list,
+        ...,
         description = "List of messages"
     )
+
+    # has_next: bool = Field(
+    #     ...,
+    #     description = "True if there are more messages to fetch"
+    # )
