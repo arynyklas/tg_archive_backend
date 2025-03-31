@@ -70,7 +70,7 @@ def main() -> None:
             *BASE_TLOBJECT_IN_TLS
         ])))  # type: ignore
 
-        print("Generating TLObjects...")
+        print(f"Generating TLObjects for layer {layer}...")
 
         generate_tlobjects(tlobjects, layer, IMPORT_DEPTH, layer_tlobject_dir)
 

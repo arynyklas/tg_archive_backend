@@ -19,7 +19,7 @@ PAGINATION_LIMIT = 100
     summary = "Get messages",
     responses = exceptions.combine(
         # exceptions.ConcurrentRequestsError,
-        exceptions.InvalidParametersError,
+        # exceptions.InvalidParametersError,
     )
 )
 # @_dependencies.block_concurrent_requests()
