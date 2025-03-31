@@ -1,8 +1,6 @@
-from fastapi import Query
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator
 from datetime import datetime
 from functools import partial
-from typing_extensions import Self
 
 import typing
 
@@ -12,6 +10,8 @@ from .base import BaseModel, BaseRequest, BaseResponse, Timestamp
 
 DICT_DATA_T = dict[str, typing.Any]
 OKResponse = BaseResponse
+
+MODEL_TIMESTAMP_T = int | Timestamp | datetime
 Field_timestamp = partial(Field, examples=[1735689601])
 
 
@@ -74,7 +74,7 @@ class Message(BaseModel):
     )
 
     tg_user_id: int | None = Field(
-        None,
+        ...,
         description = "Telegram user ID"
     )
 
@@ -84,11 +84,11 @@ class Message(BaseModel):
     )
 
     md_text: str | None = Field(
-        None,
+        ...,
         description = "Markdown text of the message"
     )
 
-    sent_at: int | Timestamp | datetime = Field_timestamp(
+    sent_at: MODEL_TIMESTAMP_T = Field_timestamp(
         ...,
         description = "Datetime when the message was sent (UTC)"
     )
@@ -108,7 +108,7 @@ class Message(BaseModel):
         description = "Packet data (hex)"
     )
 
-    inserted_at: int | Timestamp | datetime = Field_timestamp(
+    inserted_at: MODEL_TIMESTAMP_T = Field_timestamp(
         ...,
         description = "Datetime when the message was inserted into the database (UTC)"
     )
