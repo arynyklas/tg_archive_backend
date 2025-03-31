@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Body
-# from pyrogram import types
 from telethon.tl.tlobject import TLObject
-# from pyrogram.parser.markdown import Markdown
 from functools import partial
 
 import sqlalchemy as sa
@@ -11,6 +9,7 @@ from src import db, schemas, exceptions
 from src.api import _dependencies
 from src.global_variables import GlobalVariables
 from src.tg_packet_parser import parse_tg_packet
+from src.markdown_utils import unparse_markdown
 
 
 api_upload_tg_packet_router = APIRouter()
@@ -110,11 +109,14 @@ async def api_upload_tg_packet_handler(
                         db_user: db.User | None = None
                         chat_or_user_added = False
 
-                        if not await db_session.scalar(
-                            sa.select(sa.exists().where(
+                        db_chat = await db_session.scalar(
+                            sa.select(db.Chat)
+                            .where(
                                 db.Chat.tg_chat_id == tg_chat_id
-                            ))
-                        ):
+                            )
+                        )
+
+                        if not db_chat:
                             db_chat = db.Chat(
                                 tg_chat_id = tg_chat_id
                             )
@@ -123,11 +125,14 @@ async def api_upload_tg_packet_handler(
 
                             chat_or_user_added = True
 
-                        if not await db_session.scalar(
-                            sa.select(sa.exists().where(
+                        db_user = await db_session.scalar(
+                            sa.select(db.User)
+                            .where(
                                 db.User.tg_user_id == tg_user_id
-                            ))
-                        ):
+                            )
+                        )
+
+                        if not db_user:
                             db_user = db.User(
                                 tg_user_id = tg_user_id
                             )
@@ -145,10 +150,14 @@ async def api_upload_tg_packet_handler(
                             if chat_or_user_added:
                                 await db_session.flush()
 
-                            # TODO: markdown text
-                            # entities = filter(lambda x: x is not None, [types.MessageEntity._parse(None, entity) for entity in (message.entities or [])])  # type: ignore
-                            # md_text = typing.cast(str, Markdown.unparse(message.message, entities))  # type: ignore
-                            md_text = typing.cast(str, message.message)  # type: ignore
+                            message_text = typing.cast(str | None, message.message)  # type: ignore
+
+                            md_text: str | None
+
+                            if message_text:
+                                md_text = unparse_markdown(message_text, message.entities)  # type: ignore
+                            else:
+                                md_text = None
 
                             db_session.add(db.Message(
                                 tg_chat_id = tg_chat_id,
