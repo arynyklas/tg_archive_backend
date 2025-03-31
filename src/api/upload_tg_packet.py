@@ -9,7 +9,7 @@ import typing
 from src import db, schemas, exceptions
 from src.api import _dependencies
 from src.global_variables import GlobalVariables
-from src.tg_packet_parser import parse_tg_packet
+from src.tg_packet_parser import parse_tg_packet, BinaryReader, tgread_object
 from src.markdown_utils import unparse_markdown
 
 
@@ -17,7 +17,7 @@ api_upload_tg_packet_router = APIRouter()
 
 
 def _is_tlobject_same_by_constructor_id(tlobject: TLObject, name: str, needed_layers_tlobject_constructor_ids: dict[str, int]) -> bool:
-    return typing.cast(int, tlobject.CONSTRUCTOR_ID) == needed_layers_tlobject_constructor_ids[name]
+    return tlobject and typing.cast(int, tlobject.CONSTRUCTOR_ID) == needed_layers_tlobject_constructor_ids[name]
 
 
 @api_upload_tg_packet_router.post(
@@ -82,6 +82,20 @@ async def api_upload_tg_packet_handler(
         needed_layers_tlobject_constructor_ids = GlobalVariables.needed_layers_tlobjects_constructor_ids[layer]
     )
 
+    if is_tlobject_same_by_constructor_id(tl_message.obj, "GzipPacked"):  # type: ignore
+        with BinaryReader(tl_message.obj.data) as reader:  # type: ignore
+            tlobjects = GlobalVariables.layers_tlobjects[layer]
+            core_objects = GlobalVariables.layers_coreobjects[layer]
+
+            reader.tgread_object = partial(  # type: ignore
+                tgread_object,
+                reader = reader,
+                tlobjects = tlobjects,
+                core_objects = core_objects
+            )
+
+            tl_message.obj = reader.tgread_object()
+
     if is_tlobject_same_by_constructor_id(tl_message.obj, "Updates"):  # type: ignore
         for update in tl_message.obj.updates:  # type: ignore
             if is_tlobject_same_by_constructor_id(update, "UpdateNewChannelMessage"):  # type: ignore
@@ -89,6 +103,23 @@ async def api_upload_tg_packet_handler(
 
                 if is_tlobject_same_by_constructor_id(message, "Message"):  # type: ignore
                     if is_tlobject_same_by_constructor_id(message.peer_id, "PeerChannel") and is_tlobject_same_by_constructor_id(message.from_id, "PeerUser"):  # type: ignore
+                        # tg_chat_obj = None  # type: ignore
+
+                        # for tg_chat_obj_ in tl_message.obj.chats:  # type: ignore
+                        #     if is_tlobject_same_by_constructor_id(tg_chat_obj_, "Channel") and tg_chat_obj_.id == message.peer_id.channel_id:  # type: ignore
+                        #         tg_chat_obj = tg_chat_obj_  # type: ignore
+                        #         break
+
+                        tg_user_obj = None
+
+                        for tg_user_obj_ in tl_message.obj.users:  # type: ignore
+                            if is_tlobject_same_by_constructor_id(tg_user_obj_, "User") and tg_user_obj_.id == message.from_id.user_id:  # type: ignore
+                                tg_user_obj = tg_user_obj_  # type: ignore
+                                break
+
+                        if tg_user_obj and tg_user_obj.bot:  # type: ignore
+                            continue
+
                         tg_user_id = typing.cast(int, message.from_id.user_id)  # type: ignore
                         tg_chat_id = typing.cast(int, -1 * (message.peer_id.channel_id + 1_000_000_000_000))  # type: ignore
                         tg_message_id = typing.cast(int, message.id)  # type: ignore
@@ -134,6 +165,11 @@ async def api_upload_tg_packet_handler(
                                 db.Message.tg_message_id == tg_message_id
                             ))
                         ):
+                            reply_to_tg_message_id = None
+
+                            if is_tlobject_same_by_constructor_id(message.reply_to, "MessageReplyHeader") and not message.reply_to.reply_to_peer_id:  # type: ignore
+                                reply_to_tg_message_id = typing.cast(int, message.reply_to.reply_to_msg_id)  # type: ignore
+
                             if chat_or_user_added:
                                 await db_session.flush()
 
@@ -142,7 +178,7 @@ async def api_upload_tg_packet_handler(
                             md_text: str | None
 
                             if message_text:
-                                md_text = unparse_markdown(message_text, message.entities)  # type: ignore
+                                md_text = unparse_markdown(message_text, message.entities or [])  # type: ignore
                             else:
                                 md_text = None
 
@@ -150,6 +186,7 @@ async def api_upload_tg_packet_handler(
                                 tg_chat_id = tg_chat_id,
                                 tg_user_id = tg_user_id,
                                 tg_message_id = tg_message_id,
+                                reply_to_tg_message_id = reply_to_tg_message_id,
                                 md_text = md_text,
                                 sent_at = message.date,  # type: ignore
                                 used_auth_key = auth_key,

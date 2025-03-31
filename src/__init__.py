@@ -16,7 +16,7 @@ def _find_tlobject_by_name(tlobjects: dict[int, TLObject], name: str) -> TLObjec
         if tlobject.__name__ == name:  # type: ignore
             return tlobject
 
-    raise ValueError(f"TLObject with name {name} not found in layer {tlobjects}")
+    raise ValueError(f"TLObject with name {name} not found in layer")
 
 for layer_dirpath in constants.LAYERS_DIRPATH.iterdir():
     if not layer_dirpath.name.isdigit():
@@ -29,7 +29,7 @@ for layer_dirpath in constants.LAYERS_DIRPATH.iterdir():
 
 NEEDED_LAYERS_TLOBJECTS: dict[int, dict[str, TLObject]] = {
     layer: {
-        tlobject_name: _find_tlobject_by_name(tlobjects, tlobject_name)
+        tlobject_name: _find_tlobject_by_name(utils.combine_dicts(tlobjects, GlobalVariables.layers_coreobjects[layer]), tlobject_name)
         for tlobject_name in constants.NEEDED_LAYERS_TLOBJECT_NAMES
     }
     for layer, tlobjects in GlobalVariables.layers_tlobjects.items()

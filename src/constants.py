@@ -12,6 +12,7 @@ NEEDED_LAYERS_TLOBJECT_NAMES = [
     "PeerChannel",
     "PeerUser",
 
+    "GzipPacked",
     "User",
     "Chat",
     "Channel",

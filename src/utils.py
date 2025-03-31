@@ -10,6 +10,9 @@ import typing
 DEFAULT_LOG_FORMAT = "%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s"
 
 T = typing.TypeVar("T")
+K = typing.TypeVar("K")
+V = typing.TypeVar("V")
+
 UTC_TIMEZONE = timezone.utc
 
 
@@ -50,3 +53,12 @@ def get_logger(name: str, filepath: Path) -> logging.Logger:
     logger.setLevel(logging.DEBUG)
 
     return logger
+
+
+def combine_dicts(*dicts: dict[K, V]) -> dict[K, V]:
+    result: dict[K, V] = {}
+
+    for d in dicts:
+        result.update(d)
+
+    return result
