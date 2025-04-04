@@ -196,27 +196,26 @@ async def main() -> None:
     if FILTER_CHAT_IDS:
         print("Preparing to listen for messages...")
 
-        if FILTER_CHAT_IDS:
-            for chat_id in FILTER_CHAT_IDS:
-                input_entity = await client.get_input_entity(chat_id)
+        for chat_id in FILTER_CHAT_IDS:
+            input_entity = await client.get_input_entity(chat_id)
 
-                if not isinstance(input_entity, tl_types.InputPeerChannel):
-                    raise ValueError(f"Expected InputPeerChannel, got {type(input_entity)}")
+            if not isinstance(input_entity, tl_types.InputPeerChannel):
+                raise ValueError(f"Expected InputPeerChannel, got {type(input_entity)}")
 
-                pts = typing.cast(int, (await client(tl_functions.channels.GetFullChannelRequest(  # type: ignore
-                    channel = input_entity  # type: ignore
-                ))).full_chat.pts)
+            pts = typing.cast(int, (await client(tl_functions.channels.GetFullChannelRequest(  # type: ignore
+                channel = input_entity  # type: ignore
+            ))).full_chat.pts)
 
-                await client(tl_functions.updates.GetChannelDifferenceRequest(  # type: ignore
-                    channel = tl_types.InputChannel(
-                        channel_id = input_entity.channel_id,
-                        access_hash = input_entity.access_hash
-                    ),
-                    filter = tl_types.ChannelMessagesFilterEmpty(),
-                    pts = pts,
-                    limit = 100,
-                    force = False
-                ))
+            await client(tl_functions.updates.GetChannelDifferenceRequest(  # type: ignore
+                channel = tl_types.InputChannel(
+                    channel_id = input_entity.channel_id,
+                    access_hash = input_entity.access_hash
+                ),
+                filter = tl_types.ChannelMessagesFilterEmpty(),
+                pts = pts,
+                limit = 100,
+                force = False
+            ))
 
     # NOTE: issue: not all Updates being received.
     #  probably, because of not updating pts.
