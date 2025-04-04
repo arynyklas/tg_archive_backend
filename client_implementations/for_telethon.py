@@ -164,7 +164,7 @@ async def custom_sender_recv_loop(self: MTProtoSender, send_packets_queue: SEND_
                 pass
 
         try:
-            await self._process_message(message)  # type: ignore
+            await self._process_message(tl_message)  # type: ignore
         except Exception:
             self._log.exception('Unhandled error while processing msgs')  # type: ignore
 
