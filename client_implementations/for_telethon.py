@@ -220,8 +220,8 @@ async def main() -> None:
     # NOTE: issue: not all Updates being received.
     #  probably, because of not updating pts.
     #  possible fix: monitor received packets for constrctors:
-    #  UpdateShortMessage, 
-    #  and probably this also won't work, cause Difference & DifferenceSlice containts
+    #  Difference & DifferenceSlice
+    #  and probably this also won't work, cause those objects containts
     #  updates and messages fields, so there is a way to only encrypt
     #  Updates with our own solution, which can be used against us.
 
