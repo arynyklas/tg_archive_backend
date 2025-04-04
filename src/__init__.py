@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import create_async_engine as create_db_engine
 from telethon.tl.tlobject import TLObject
 
+import logging
 import typing
 
 from src import db, utils, exceptions, constants
@@ -27,9 +28,18 @@ for layer_dirpath in constants.LAYERS_DIRPATH.iterdir():
     GlobalVariables.layers_tlobjects[layer] = __import__(f"layers.{layer_dirpath.name}.tl.alltlobjects", fromlist=['tlobjects']).tlobjects
     GlobalVariables.layers_coreobjects[layer] = __import__(f"layers.{layer_dirpath.name}.tl.core", fromlist=['core_objects']).core_objects
 
+if not GlobalVariables.layers_tlobjects:
+    raise RuntimeError(f"No layers found. Please check the {constants.LAYERS_DIRPATH.resolve().as_posix()} directory.")
+
 NEEDED_LAYERS_TLOBJECTS: dict[int, dict[str, TLObject]] = {
     layer: {
-        tlobject_name: _find_tlobject_by_name(utils.combine_dicts(tlobjects, GlobalVariables.layers_coreobjects[layer]), tlobject_name)
+        tlobject_name: _find_tlobject_by_name(
+            utils.merge_dicts(
+                tlobjects,
+                GlobalVariables.layers_coreobjects[layer]
+            ),
+            tlobject_name
+        )
         for tlobject_name in constants.NEEDED_LAYERS_TLOBJECT_NAMES
     }
     for layer, tlobjects in GlobalVariables.layers_tlobjects.items()
@@ -44,16 +54,17 @@ GlobalVariables.needed_layers_tlobjects_constructor_ids = {
 }
 
 
-if not GlobalVariables.layers_tlobjects:
-    raise RuntimeError(f"No layers found. Please check the {constants.LAYERS_DIRPATH.resolve().as_posix()} directory.")
-
-
 from .api import api_router  # noqa
+
+
+logging.getLogger("sqlalchemy.engine.Engine").disabled = True
 
 
 logger = utils.get_logger(
     name = config.logger_name,
-    filepath = constants.LOGS_DIRPATH / constants.LOG_FILENAME
+    filepath = constants.LOGS_DIRPATH / constants.LOG_FILENAME,
+    file_level = config.logger_file_level,
+    console_level = config.logger_console_level
 )
 
 GlobalVariables.logger = logger

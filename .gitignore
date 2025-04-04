@@ -9,6 +9,7 @@ logs*/
 *.lock
 *.session*
 layers/
+*.txt
 
 scripts/
 

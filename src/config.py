@@ -32,6 +32,8 @@ yaml.Dumper.add_multi_representer(
 class Config(BaseModel):
     debug: bool
     logger_name: str
+    logger_file_level: str
+    logger_console_level: str
     db_url: str
     host: str
     port: int

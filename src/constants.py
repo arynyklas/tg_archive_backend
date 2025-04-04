@@ -8,6 +8,9 @@ APP_VERSION = "0.1.0"
 NEEDED_LAYERS_TLOBJECT_NAMES = [
     "Updates",
     "UpdateNewChannelMessage",
+    "ChannelDifference",
+    "ChannelDifferenceTooLong",
+    "MessageContainer",
     "Message",
     "PeerChannel",
     "PeerUser",

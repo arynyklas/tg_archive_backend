@@ -48,13 +48,6 @@ def tgread_object(reader: BinaryReader, tlobjects: dict[int, TLObject], core_obj
             error = TypeNotFoundError(constructor_id, reader.read())
             reader.set_position(pos)  # type: ignore
             raise error
-            # return None
-
-        else:
-            print("Class found from child", hex(constructor_id))
-
-    else:
-        print("Class found from main", hex(constructor_id))
 
     return clazz.from_reader(reader)  # type: ignore
 
