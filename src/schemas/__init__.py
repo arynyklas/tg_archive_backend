@@ -83,6 +83,11 @@ class Message(BaseModel):
         description = "Telegram message ID"
     )
 
+    reply_to_tg_message_id: int | None = Field(
+        ...,
+        description = "Telegram message ID of the message this message is replying to"
+    )
+
     md_text: str | None = Field(
         ...,
         description = "Markdown text of the message"

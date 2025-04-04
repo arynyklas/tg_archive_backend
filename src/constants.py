@@ -38,6 +38,7 @@ NEEDED_LAYERS_TLOBJECT_NAMES = [
     "MessageEntityUnknown",
     "MessageEntityUrl",
     "MessageReplies",
+    "MessageReplyHeader",
     "MessageService",
     "UserProfilePhotoEmpty",
     "UserProfilePhoto",

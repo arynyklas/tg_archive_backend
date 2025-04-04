@@ -119,6 +119,7 @@ async def api_get_messages_handler(
                 tg_chat_id = db_message.tg_chat_id,
                 tg_user_id = db_message.tg_user_id,
                 tg_message_id = db_message.tg_message_id,
+                reply_to_tg_message_id = db_message.reply_to_tg_message_id,
                 md_text = db_message.md_text,
                 sent_at = db_message.sent_at,
                 used_auth_key = db_message.used_auth_key.hex(),
