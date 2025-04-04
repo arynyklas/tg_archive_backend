@@ -12,14 +12,8 @@ import asyncio
 import struct
 import typing
 
+import config
 
-SESSION_NAME = "userbot"
-API_ID = 1234
-API_HASH = "abcd"
-
-FILTER_CHAT_IDS: list[int] | None = [
-    -1001217010605,  # @durovschars
-]
 
 API_URL = "http://127.0.0.1:8192/api"
 MAX_SEND_PACKETS_QUEUE_SIZE = 1000
@@ -190,7 +184,7 @@ async def send_packets_loop(send_packets_queue: SEND_PACKETS_QUEUE_T) -> None:
             send_packets_queue.task_done()
 
 
-async def setup_client_custom_sender(client: TelegramClient) -> None:
+async def setup_client_custom_sender(client: TelegramClient, filter_chat_ids: list[int] | None=None) -> None:
     if client.is_connected():
         raise RuntimeError("Client is already connected")
 
@@ -203,7 +197,7 @@ async def setup_client_custom_sender(client: TelegramClient) -> None:
 
     asyncio.create_task(send_packets_loop(send_packets_queue))
 
-    client._sender._recv_loop = partial(custom_sender_recv_loop, client._sender, send_packets_queue, FILTER_CHAT_IDS)  # type: ignore
+    client._sender._recv_loop = partial(custom_sender_recv_loop, client._sender, send_packets_queue, filter_chat_ids)  # type: ignore
 
 
 async def filter_chat_ids_difference_checker(client: TelegramClient, input_peer_channels: list[tl_types.InputPeerChannel]) -> None:
@@ -239,35 +233,32 @@ async def filter_chat_ids_difference_checker(client: TelegramClient, input_peer_
 
         pts_dict[input_peer_channel.channel_id] = typing.cast(int, full_channel.full_chat.pts)  # type: ignore
 
-    await asyncio.gather(
-        *[
-            _per_channel_difference_checker(input_channel)
-            for input_channel in input_channels
-        ]
-    )
+    await asyncio.gather(*[
+        _per_channel_difference_checker(input_channel)
+        for input_channel in input_channels
+    ])
 
 
 async def main() -> None:
     print("Using layer:", LAYER)
 
     client = TelegramClient(
-        session = SESSION_NAME,
-        api_id = API_ID,
-        api_hash = API_HASH,
+        session = config.SESSION_NAME,
+        api_id = config.API_ID,
+        api_hash = config.API_HASH,
         receive_updates = True
     )
 
-    await setup_client_custom_sender(client)
+    await setup_client_custom_sender(client, config.FILTER_CHAT_IDS)
 
     await client.start()  # type: ignore
-    await client.connect()
 
-    if FILTER_CHAT_IDS:
+    if config.FILTER_CHAT_IDS:
         print("Preparing to listening for messages...")
 
         input_peer_channels: list[tl_types.InputPeerChannel] = []
 
-        for chat_id in FILTER_CHAT_IDS:
+        for chat_id in config.FILTER_CHAT_IDS:
             input_peer = await client.get_input_entity(chat_id)
 
             if not isinstance(input_peer, tl_types.InputPeerChannel):

@@ -10,6 +10,7 @@ logs*/
 *.session*
 layers/
 *.txt
+client_implementations/config.py
 
 scripts/
 
